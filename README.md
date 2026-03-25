@@ -1,50 +1,58 @@
-# Welcome to your Expo app 👋
+📚 Smart Attendance - Sistema de Asistencia QR (MVP)
+Este proyecto es una aplicación móvil desarrollada con React Native y Expo para la gestión de asistencia en entornos educativos mediante códigos QR dinámicos.
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+🚀 Avances del Proyecto (Entregable Actual)
+En esta fase, se ha implementado la base funcional del sistema siguiendo los principios de Arquitectura Limpia (Clean Architecture):
 
-## Get started
+Gestión de Roles: Pantalla de bienvenida que permite alternar entre la vista de Profesor (Admin) y Estudiante.
 
-1. Install dependencies
+Módulo del Profesor (HU1): * Formulario de creación de asignaturas con validación de campos.
 
-   ```bash
-   npm install
-   ```
+Listado dinámico de clases almacenadas en memoria.
 
-2. Start the app
+Panel de control por asignatura (Detalle de Clase).
 
-   ```bash
-   npx expo start
-   ```
+Módulo del Estudiante (HU3): * Interfaz para ingreso de credenciales (ID y Celular).
 
-In the output, you'll find options to open the app in a
+Espacio para validación de registros.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Seguridad y Control (HU2 & HU6):
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Implementación de un Botón Flotante (FAB) para la generación de QR.
 
-## Get a fresh project
+Switch de habilitación/deshabilitación de asistencia en tiempo real.
 
-When you're ready, run:
+Lógica de tokens dinámicos basada en ID_Clase + Fecha para evitar fraude con fotos de días anteriores.
 
-```bash
-npm run reset-project
-```
+🛠️ Tecnologías Utilizadas
+React Native / Expo: Framework principal para el desarrollo móvil.
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+TypeScript: Para un tipado fuerte y reducción de errores en tiempo de ejecución.
 
-## Learn more
+Expo Router: Para la navegación basada en archivos.
 
-To learn more about developing your project with Expo, look at the following resources:
+Estado de React: Uso de useState para manejar la navegación interna y la persistencia en memoria.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+📦 Instalación y Ejecución
+Para correr este proyecto en tu máquina local, sigue estos pasos:
+1. Instalar dependencias:
+   'npm install'
+2. Iniciar el servidor de Expo:
+   'npx expo start'
+3. Visualización:
+   1. Escanea el código QR con la app Expo Go en tu dispositivo móvil.
+   2. Presiona w para abrir en el navegador.
+   3. Presiona r para recargar si realizas cambios.
 
-## Join the community
+📂 Estructura del Código
+1. /app: Contiene el orquestador principal (index.tsx).
 
-Join our community of developers creating universal apps.
+2. /components: Componentes visuales separados por responsabilidad (ProfesorView, EstudianteView, DetalleClaseView).
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+3. /models: Definición de interfaces y "base de datos" temporal en memoria (clases.ts, estudiantes.ts).
+
+## 🚀 Futuras Mejoras
+- [ ] Conexión a Base de Datos (Firebase/Supabase).
+- [ ] Escaneo de QR mediante cámara física (`expo-barcode-scanner`).
+- [ ] Validación por Geolocalización para asegurar presencia en el aula.
+- [ ] Exportación de reportes de asistencia en formato CSV/PDF.
