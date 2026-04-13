@@ -1,20 +1,39 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import ProfesorView from '../components/ProfesorView';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import EstudianteView from '../components/EstudianteView';
+import LoginEstudiante from '../components/LoginEstudiante';
+import LoginProfesor from '../components/LoginProfesor';
+import ProfesorView from '../components/ProfesorView';
+import RegistroEstudiante from '../components/RegistroEstudiante';
+
 
 export default function Index() {
   // Estado para controlar qué vista mostrar (null, 'maestro', 'estudiante')
   const [role, setRole] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+
+  const [modoRegistro, setModoRegistro] = useState(false);
 
   // 1. Si el rol es 'maestro', le pasamos la función para que pueda volver
-  if (role === 'maestro') {
+  if (role === 'profesor') {
+    if (!user) {
+      return <LoginProfesor onLogin={setUser} onBack={() => setRole(null)} />
+    }
     return <ProfesorView onBack={() => setRole(null)} />;
   }
 
-  // 2. Si el rol es 'estudiante', hacemos lo mismo
   if (role === 'estudiante') {
-    return <EstudianteView onBack={() => setRole(null)} />;
+    if (!user) {
+      return <LoginEstudiante onLogin={setUser} onBack={() => setRole(null)} />;
+    }
+    return <EstudianteView user={user} onBack={() => {
+      setUser(null);
+      setRole(null);
+    }} />;
+  }
+
+  if (modoRegistro) {
+    return <RegistroEstudiante onBack={() => setModoRegistro(false)} />;
   }
 
   // 3. Pantalla inicial (Role Selection)
@@ -23,20 +42,25 @@ export default function Index() {
       <Text style={styles.welcome}>Smart Attendance QR</Text>
       <Text style={styles.instruction}>Selecciona tu rol para comenzar:</Text>
 
-      <TouchableOpacity 
-        style={[styles.roleButton, { backgroundColor: '#4CAF50' }]} 
-        onPress={() => setRole('maestro')}
+      <TouchableOpacity
+        style={[styles.roleButton, { backgroundColor: '#4CAF50' }]}
+        onPress={() => setRole('profesor')}
       >
         <Text style={styles.roleText}>Soy Profesor (Admin)</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={[styles.roleButton, { backgroundColor: '#2196F3' }]} 
+      <TouchableOpacity
+        style={[styles.roleButton, { backgroundColor: '#2196F3' }]}
         onPress={() => setRole('estudiante')}
       >
         <Text style={styles.roleText}>Soy Estudiante</Text>
       </TouchableOpacity>
-      
+
+      <TouchableOpacity
+        onPress={() => setModoRegistro(true)}>
+        <Text style={styles.registerText}>Nuevo? Registrate</Text>
+      </TouchableOpacity>
+
       <Text style={styles.footer}>MVP - Arquitectura Limpia</Text>
     </View>
   );
@@ -84,5 +108,11 @@ const styles = StyleSheet.create({
     bottom: 30,
     color: '#bdc3c7',
     fontSize: 12,
+  },
+  registerText:{
+    marginTop:20,
+    color:'#007aff',
+    fontSize:16,
+    textAlign:'center'
   }
 });

@@ -17,3 +17,14 @@ export const listaEstudiantes: Estudiante[] = [
 export const validarIdentidadEstudiante = (id: string, celular: string): boolean => {
   return listaEstudiantes.some(est => est.id === id && est.celular === celular);
 };
+
+//funcion para registrar nuevos estudiantes
+export const registrarEstudiante=(nuevo:Estudiante):boolean=>{
+  const existe=listaEstudiantes.some(est=>est.id === nuevo.id);
+
+  if (existe){
+    return false;
+  }
+  listaEstudiantes.push(nuevo);
+  return true;
+};

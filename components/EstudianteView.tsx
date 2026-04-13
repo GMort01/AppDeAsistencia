@@ -1,19 +1,22 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, FlatList } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import React, { useState } from 'react';
+import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 // IMPORTANTE: Importamos la interfaz Clase también
-import { registrarAsistencia, Clase } from '../models/clases'; 
+import { Clase, registrarAsistencia } from '../models/clases';
 
 interface EstudianteViewProps {
   onBack: () => void;
+  user: {
+    id: string;
+    nombre: string;
+    celular: string;
+  };
 }
 
-const EstudianteView = ({ onBack }: EstudianteViewProps) => {
+const EstudianteView = ({ onBack, user }: EstudianteViewProps) => {
   const [permiso, pedirPermiso] = useCameraPermissions();
   const [escaneando, setEscaneando] = useState(false);
-  
-  const [nombre, setNombre] = useState('');
-  const [matricula, setMatricula] = useState('');
+
 
   // NUEVO: Estado para saber si ya estamos dentro de una clase viendo la lista
   const [claseActual, setClaseActual] = useState<Clase | null>(null);
@@ -36,20 +39,24 @@ const EstudianteView = ({ onBack }: EstudianteViewProps) => {
     );
   }
 
+  const iniciarEscaneo = () => {
+    setEscaneando(true);
+  };
+
   const handleQRDetectado = (resultado: { data: string }) => {
-    setEscaneando(false); 
-    const partes = resultado.data.split('-'); 
-    
+    setEscaneando(false);
+    const partes = resultado.data.split('-');
+
     if (partes[0] === 'CLASE' && partes.length >= 2) {
-      const claseId = partes[1]; 
-      
-      const nuevoEstudiante = { id: matricula, nombre: nombre };
+      const claseId = partes[1];
+
+      const nuevoEstudiante = { id: user.id, nombre: user.nombre };
       const resultadoRegistro = registrarAsistencia(claseId, nuevoEstudiante);
-      
+
       if (resultadoRegistro.exito && resultadoRegistro.clase) {
         Alert.alert("¡Éxito!", resultadoRegistro.mensaje);
         // Mágia: Guardamos la clase y la pantalla cambiará a la lista
-        setClaseActual(resultadoRegistro.clase); 
+        setClaseActual(resultadoRegistro.clase);
       } else {
         Alert.alert("Aviso", resultadoRegistro.mensaje);
       }
@@ -58,13 +65,7 @@ const EstudianteView = ({ onBack }: EstudianteViewProps) => {
     }
   };
 
-  const iniciarEscaneo = () => {
-    if (!nombre || !matricula) {
-      Alert.alert("Faltan datos", "Por favor ingresa tu nombre y matrícula/ID antes de escanear.");
-      return;
-    }
-    setEscaneando(true);
-  };
+
 
   // --- NUEVA VISTA: MODO LECTURA PARA EL ESTUDIANTE ---
   if (claseActual) {
@@ -83,20 +84,20 @@ const EstudianteView = ({ onBack }: EstudianteViewProps) => {
           <Text style={styles.sectionTitle}>
             Compañeros Presentes ({claseActual.asistentes?.length || 0})
           </Text>
-          
+
           <FlatList
             data={claseActual.asistentes || []}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <View style={[
-                styles.studentRow, 
+                styles.studentRow,
                 // Resaltamos al propio usuario en la lista
-                item.id === matricula ? styles.miFila : null
+                item.id === user.id ? styles.miFila : null
               ]}>
-                <Text style={[styles.studentName, item.id === matricula && styles.miTexto]}>
-                  {item.nombre} {item.id === matricula && "(Tú)"}
+                <Text style={[styles.studentName, item.id === user.id && styles.miTexto]}>
+                  {item.nombre} {item.id === user.id && "(Tú)"}
                 </Text>
-                <Text style={[styles.studentId, item.id === matricula && styles.miTexto]}>ID: {item.id}</Text>
+                <Text style={[styles.studentId, item.id === user.id && styles.miTexto]}>ID: {item.id}</Text>
               </View>
             )}
             ListEmptyComponent={
@@ -106,6 +107,8 @@ const EstudianteView = ({ onBack }: EstudianteViewProps) => {
         </View>
       </View>
     );
+
+
   }
   // ----------------------------------------------------
 
@@ -119,8 +122,8 @@ const EstudianteView = ({ onBack }: EstudianteViewProps) => {
 
       {escaneando ? (
         <View style={styles.camaraContainer}>
-          <CameraView 
-            style={styles.camara} 
+          <CameraView
+            style={styles.camara}
             facing="back"
             onBarcodeScanned={handleQRDetectado}
             barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
@@ -131,16 +134,8 @@ const EstudianteView = ({ onBack }: EstudianteViewProps) => {
         </View>
       ) : (
         <View style={styles.infoContainer}>
-          <View style={styles.formulario}>
-            <Text style={styles.label}>Tu Nombre:</Text>
-            <TextInput style={styles.input} placeholder="Ej: Juan Pérez" value={nombre} onChangeText={setNombre} />
-            
-            <Text style={styles.label}>Tu Matrícula/ID:</Text>
-            <TextInput style={styles.input} placeholder="Ej: 123456" value={matricula} onChangeText={setMatricula} keyboardType="numeric" />
-          </View>
-
           <Text style={styles.instrucciones}>
-            Ingresa tus datos y escanea el QR del profesor.
+            Bienvenid@ {user.nombre}. Escanea el QR del profesor.
           </Text>
           <TouchableOpacity style={styles.botonEscanear} onPress={iniciarEscaneo}>
             <Text style={styles.botonEscanearTexto}>📷 Escanear QR</Text>
@@ -172,7 +167,7 @@ const styles = StyleSheet.create({
   camara: { flex: 1 },
   cancelarBoton: { position: 'absolute', bottom: 30, alignSelf: 'center', backgroundColor: '#dc3545', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 10 },
   cancelarTexto: { color: 'white', fontWeight: 'bold', fontSize: 16 },
-  
+
   // ESTILOS NUEVOS PARA LA VISTA DE LECTURA
   headerLectura: { marginBottom: 30, backgroundColor: '#fff', padding: 20, borderRadius: 15, elevation: 2 },
   info: { fontSize: 16, color: '#6c757d', marginTop: 5 },
