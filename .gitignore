@@ -1,0 +1,21 @@
+# --- SMARTATTENDANCE GITIGNORE ---
+
+# Dependencias
+node_modules/
+
+# Archivos de entorno y configuración local
+.env
+.env.*
+
+# Cache de TypeScript
+*.tsbuildinfo
+
+# Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db

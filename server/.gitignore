@@ -1,0 +1,23 @@
+# Server app ignores
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.cache/
+
+# Environment files
+.env
+.env.*
+
+# Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# Mac/Windows local files
+.DS_Store
+Thumbs.db

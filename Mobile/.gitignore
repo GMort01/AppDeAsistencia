@@ -1,0 +1,40 @@
+# Mobile app ignores
+
+# Dependencies
+node_modules/
+
+# Expo files
+.expo/
+.expo-shared/
+
+# Bundled/build output
+dist/
+web-build/
+
+# Metro & expo local files
+.metro-health-check*
+expo-env.d.ts
+
+# Native artifacts
+ios/
+android/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.apk
+*.aab
+
+# Environment files
+.env
+.env.*
+
+# Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# TypeScript cache
+*.tsbuildinfo
