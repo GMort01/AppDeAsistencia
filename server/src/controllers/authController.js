@@ -29,7 +29,13 @@ exports.register = async (req, res) => {
 // --- LOGIN ESTUDIANTES ---
 exports.loginEstudiante = (req, res) => {
     const { correo_institucional, password } = req.body;
+    const deviceId = String(req.body?.deviceId || '').trim();
+    const deviceIdSecundario = String(req.body?.deviceIdSecundario || '').trim();
     const db = req.app.get('db');
+
+    if (!deviceId) {
+        return res.status(400).json({ mensaje: 'No se pudo validar este dispositivo. Actualiza la app e intenta nuevamente.' });
+    }
 
     const query = 'SELECT * FROM usuarios WHERE correo_institucional = ?';
     
@@ -52,14 +58,58 @@ exports.loginEstudiante = (req, res) => {
             return res.status(401).json({ mensaje: "Correo o contraseña incorrectos" });
         }
 
-        res.status(200).json({
-            mensaje: "Login Estudiante exitoso",
-            usuario: {
-                id: usuario.id, // Corregido según tu tabla (era 'id', no 'id_usuario')
-                nombre: usuario.nombre_completo,
-                rol: usuario.rol
-            }
-        });
+        const responderLoginExitoso = () => {
+            res.status(200).json({
+                mensaje: "Login Estudiante exitoso",
+                usuario: {
+                    id: usuario.id, // Corregido según tu tabla (era 'id', no 'id_usuario')
+                    nombre: usuario.nombre_completo,
+                    rol: usuario.rol
+                }
+            });
+        };
+
+        const dispositivoRegistrado = usuario.dispositivo_vinculado;
+        const coincidePrincipal = dispositivoRegistrado && dispositivoRegistrado === deviceId;
+        const coincideSecundario = dispositivoRegistrado
+            && deviceIdSecundario
+            && dispositivoRegistrado === deviceIdSecundario;
+
+        // Primera vez: vincular en login
+        if (!dispositivoRegistrado) {
+            return db.query(
+                'UPDATE usuarios SET dispositivo_vinculado = ? WHERE id = ?',
+                [deviceId, usuario.id],
+                (errBind) => {
+                    if (errBind) {
+                        console.error(errBind);
+                        return res.status(500).json({ mensaje: 'No se pudo vincular este dispositivo.' });
+                    }
+                    return responderLoginExitoso();
+                }
+            );
+        }
+
+        // Compatibilidad: vínculo legacy, migrar al nuevo principal
+        if (coincideSecundario && deviceId !== dispositivoRegistrado) {
+            return db.query(
+                'UPDATE usuarios SET dispositivo_vinculado = ? WHERE id = ?',
+                [deviceId, usuario.id],
+                (errMigrate) => {
+                    if (errMigrate) {
+                        console.error(errMigrate);
+                        return res.status(500).json({ mensaje: 'No se pudo validar este dispositivo.' });
+                    }
+                    return responderLoginExitoso();
+                }
+            );
+        }
+
+        if (!coincidePrincipal && !coincideSecundario) {
+            return res.status(403).json({ mensaje: 'Esta cuenta ya está vinculada a otro dispositivo.' });
+        }
+
+        return responderLoginExitoso();
     });
 };
 

@@ -14,7 +14,7 @@ const LoginProfesor = ({ onLogin, onBack }: any) => {
         }
 
         try {
-            const response = await fetch(`${API_URL}/auth/login-profesor`, {
+            const response = await fetch(`${API_URL}/auth/login/profesor`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

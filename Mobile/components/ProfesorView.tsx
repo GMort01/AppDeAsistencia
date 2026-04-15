@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, FlatList } from 'react-native';
-import { guardarClase, Clase, listaClases, eliminarClase } from '../models/clases';
+import { Clase } from '../models/clases';
 import DetalleClaseView from './DetalleClaseView';
+import { crearClase, eliminarClaseServer, listarClasesProfesor } from '../controllers/clasesController';
 
 interface ProfesorViewProps {
   user: any; // Añadido para mostrar el nombre
@@ -18,6 +19,46 @@ const ProfesorView = ({ user, onLogout }: ProfesorViewProps) => {
   
   const [claseSeleccionada, setClaseSeleccionada] = useState<Clase | null>(null);
   const [mostrandoFormulario, setMostrandoFormulario] = useState(false);
+  const [clases, setClases] = useState<Clase[]>([]);
+
+  const cargarClases = async () => {
+    const resultado = await listarClasesProfesor(String(user?.id));
+    if (resultado?.exito) {
+      const clasesMapeadas: Clase[] = (resultado.clases || []).map((c: any) => ({
+        id: String(c.id),
+        nombre: c.nombre,
+        horaInicio: c.horaInicio || '--:--',
+        horaFin: c.horaFin || '--:--',
+        fecha: c.fecha || '',
+        asistenciaAbierta: c.asistenciaAbierta ?? true,
+        asistentes: [],
+      }));
+      setClases(clasesMapeadas);
+    }
+  };
+
+  useEffect(() => {
+    cargarClases();
+  }, []);
+
+  const construirDetalleClase = (clase: Clase) => {
+    const tieneFecha = Boolean(clase.fecha?.trim());
+    const tieneHorario = clase.horaInicio !== '--:--' && clase.horaFin !== '--:--';
+
+    if (tieneFecha && tieneHorario) {
+      return `${clase.fecha} | ${clase.horaInicio} - ${clase.horaFin}`;
+    }
+
+    if (tieneHorario) {
+      return `${clase.horaInicio} - ${clase.horaFin}`;
+    }
+
+    if (tieneFecha) {
+      return clase.fecha;
+    }
+
+    return 'Horario no registrado';
+  };
 
   const formatearHora = (texto: string) => {
     const soloNumeros = texto.replace(/[^0-9]/g, '');
@@ -27,23 +68,26 @@ const ProfesorView = ({ user, onLogout }: ProfesorViewProps) => {
     return soloNumeros;
   };
 
-  const handleGuardar = () => {
+  const handleGuardar = async () => {
     if (!nombreClase || horaInicio.length < 5 || horaFin.length < 5) {
       Alert.alert("Error", "Completa el nombre y las horas en formato HH:MM.");
       return;
     }
 
-    const nuevaClase: Clase = {
-      id: Date.now().toString(),
-      nombre: nombreClase,
-      horaInicio: `${horaInicio} ${amPmInicio}`,
-      horaFin: `${horaFin} ${amPmFin}`,
-      fecha: new Date().toLocaleDateString(),
-      asistentes: [],
-    };
+    const resultado = await crearClase(
+      nombreClase,
+      String(user?.id),
+      `${horaInicio} ${amPmInicio}`,
+      `${horaFin} ${amPmFin}`,
+      new Date().toLocaleDateString()
+    );
+    if (!resultado?.exito) {
+      Alert.alert('Error', resultado?.mensaje || 'No se pudo crear la clase.');
+      return;
+    }
 
-    guardarClase(nuevaClase);
-    Alert.alert("Éxito", "Asignatura añadida correctamente.");
+    Alert.alert("Éxito", "Asignatura añadida correctamente en la base de datos.");
+    await cargarClases();
     
     setNombreClase(''); setHoraInicio(''); setHoraFin('');
     setAmPmInicio('AM'); setAmPmFin('AM');
@@ -54,10 +98,19 @@ const ProfesorView = ({ user, onLogout }: ProfesorViewProps) => {
     return (
       <DetalleClaseView 
         clase={claseSeleccionada} 
-        onBack={() => setClaseSeleccionada(null)} 
-        onDelete={(id) => {
-          eliminarClase(id);
-          setClaseSeleccionada(null); 
+        profesorId={String(user?.id)}
+        onBack={async () => {
+          await cargarClases();
+          setClaseSeleccionada(null);
+        }} 
+        onDelete={async (id) => {
+          const resultado = await eliminarClaseServer(id, String(user?.id));
+          if (!resultado?.exito) {
+            Alert.alert('Error', resultado?.mensaje || 'No se pudo eliminar la clase.');
+            return;
+          }
+          await cargarClases();
+          setClaseSeleccionada(null);
         }}
       />
     );
@@ -134,12 +187,12 @@ const ProfesorView = ({ user, onLogout }: ProfesorViewProps) => {
       <Text style={styles.title}>Mis Asignaturas</Text>
 
       <FlatList
-        data={listaClases}
+        data={clases}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.classCard} onPress={() => setClaseSeleccionada(item)}>
             <Text style={styles.classTitle}>{item.nombre}</Text>
-            <Text style={styles.classDetails}>{item.fecha} | {item.horaInicio} - {item.horaFin}</Text>
+            <Text style={styles.classDetails}>{construirDetalleClase(item)}</Text>
           </TouchableOpacity>
         )}
         ListEmptyComponent={

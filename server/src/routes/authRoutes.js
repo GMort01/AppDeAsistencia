@@ -1,14 +1,13 @@
 const express = require('express');
+const { register, loginEstudiante, loginProfesor } = require('../controllers/authController');
+
 const router = express.Router();
-const authController = require('../controllers/authController');
 
-// Ruta para registro: POST http://localhost:3000/api/auth/register
-router.post('/register', authController.register); 
-
-// Ruta para login de estudiantes: POST http://localhost:3000/api/auth/login-estudiante
-router.post('/login-estudiante', authController.loginEstudiante);
-
-// Ruta para login de profesores: POST http://localhost:3000/api/auth/login-profesor
-router.post('/login-profesor', authController.loginProfesor);
+router.post('/register', register);
+router.post('/login/estudiante', loginEstudiante);
+router.post('/login/profesor', loginProfesor);
+// Compatibilidad con rutas antiguas usadas por versiones previas del mobile
+router.post('/login-estudiante', loginEstudiante);
+router.post('/login-profesor', loginProfesor);
 
 module.exports = router;

@@ -6,6 +6,7 @@ node_modules/
 # Archivos de entorno y configuración local
 .env
 .env.*
+!.env.example
 
 # Cache de TypeScript
 *.tsbuildinfo
@@ -19,3 +20,6 @@ yarn-error.*
 # Archivos de sistema
 .DS_Store
 Thumbs.db
+
+# Artefactos accidentales de emulador/dispositivo
+Mobile/okhttp*

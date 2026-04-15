@@ -1,31 +1,79 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, Modal, Alert, FlatList } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, Modal, Alert, FlatList, Platform } from 'react-native';
 import { Clase } from '../models/clases';
+import { obtenerAsistentesClase, obtenerAsistentesClaseHoy } from '../controllers/asistenciaController';
+import { actualizarEstadoClase } from '../controllers/clasesController';
+import QRGeneradorDinamico from '../utils/qrGenerator';
+import { exportarAsistentesDelDiaExcel } from '../utils/exportExcel';
 
 interface DetalleClaseProps {
   clase: Clase;
+  profesorId: string;
   onBack: () => void;
   onDelete: (id: string) => void; // NUEVO: Prop para avisar que se borró
 }
 
-const DetalleClaseView = ({ clase, onBack, onDelete }: DetalleClaseProps) => {
-  const [asistenciaAbierta, setAsistenciaAbierta] = useState(true);
+const DetalleClaseView = ({ clase, profesorId, onBack, onDelete }: DetalleClaseProps) => {
+  const [asistenciaAbierta, setAsistenciaAbierta] = useState(clase.asistenciaAbierta ?? true);
   const [modalVisible, setModalVisible] = useState(false);
-  const [tokenActual, setTokenActual] = useState('');
+  const [asistentesActuales, setAsistentesActuales] = useState(clase.asistentes || []);
+  const detalleHorario =
+    clase.horaInicio !== '--:--' && clase.horaFin !== '--:--'
+      ? `${clase.horaInicio} - ${clase.horaFin}`
+      : 'Horario no registrado';
 
-  const generarContenidoQR = () => {
+  useEffect(() => {
+    let activo = true;
+
+    const cargarAsistentes = async () => {
+      const resultado = await obtenerAsistentesClase(clase.id);
+      if (activo && resultado?.exito) {
+        setAsistentesActuales(resultado.asistentes || []);
+      }
+    };
+
+    cargarAsistentes();
+    const intervalo = setInterval(cargarAsistentes, 3000);
+
+    return () => {
+      activo = false;
+      clearInterval(intervalo);
+    };
+  }, [clase.id]);
+
+  const cambiarEstadoAsistencia = async (nuevoEstado: boolean) => {
+    const resultado = await actualizarEstadoClase(clase.id, profesorId, nuevoEstado);
+    if (!resultado?.exito) {
+      Alert.alert('Error', resultado?.mensaje || 'No se pudo actualizar el estado de la clase.');
+      return;
+    }
+
+    setAsistenciaAbierta(nuevoEstado);
+    if (!nuevoEstado) {
+      setModalVisible(false);
+    }
+  };
+
+  const abrirQR = () => {
     if (!asistenciaAbierta) {
       Alert.alert("Aviso", "La asistencia está deshabilitada.");
       return;
     }
-    const token = `CLASE-${clase.id}-FECHA-${new Date().toLocaleDateString()}`;
-    setTokenActual(token);
     setModalVisible(true);
   };
 
   // NUEVO: Confirmación antes de borrar
   const confirmarEliminacion = () => {
+    if (Platform.OS === 'web') {
+      const confirmado = typeof window !== 'undefined'
+        ? window.confirm(`¿Estás seguro de que deseas eliminar la clase de ${clase.nombre}?`)
+        : true;
+      if (confirmado) {
+        onDelete(clase.id);
+      }
+      return;
+    }
+
     Alert.alert(
       "Eliminar Clase",
       `¿Estás seguro de que deseas eliminar la clase de ${clase.nombre}?`,
@@ -34,6 +82,21 @@ const DetalleClaseView = ({ clase, onBack, onDelete }: DetalleClaseProps) => {
         { text: "Eliminar", style: "destructive", onPress: () => onDelete(clase.id) }
       ]
     );
+  };
+
+  const exportarExcelDelDia = async () => {
+    const resultado = await obtenerAsistentesClaseHoy(clase.id);
+    if (!resultado?.exito) {
+      Alert.alert('Error', 'No se pudo obtener la lista de asistencia del día.');
+      return;
+    }
+
+    try {
+      exportarAsistentesDelDiaExcel(clase.nombre, resultado.asistentes || []);
+      Alert.alert('Éxito', 'Se descargó el Excel de asistencia del día.');
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo exportar el archivo Excel en este dispositivo.');
+    }
   };
 
   return (
@@ -49,9 +112,13 @@ const DetalleClaseView = ({ clase, onBack, onDelete }: DetalleClaseProps) => {
         </TouchableOpacity>
       </View>
 
+      <TouchableOpacity onPress={exportarExcelDelDia} style={styles.exportButton}>
+        <Text style={styles.exportButtonText}>Descargar Excel del día</Text>
+      </TouchableOpacity>
+
       <View style={styles.header}>
         <Text style={styles.title}>{clase.nombre}</Text>
-        <Text style={styles.info}>{clase.horaInicio} - {clase.horaFin}</Text>
+        <Text style={styles.info}>{detalleHorario}</Text>
       </View>
 
       <View style={styles.controlCard}>
@@ -62,7 +129,7 @@ const DetalleClaseView = ({ clase, onBack, onDelete }: DetalleClaseProps) => {
           </Text>
           <Switch 
             value={asistenciaAbierta} 
-            onValueChange={setAsistenciaAbierta}
+            onValueChange={cambiarEstadoAsistencia}
             trackColor={{ false: "#767577", true: "#81b0ff" }}
             thumbColor={asistenciaAbierta ? "#f5dd4b" : "#f4f3f4"}
           />
@@ -72,11 +139,11 @@ const DetalleClaseView = ({ clase, onBack, onDelete }: DetalleClaseProps) => {
       {/* NUEVO: Lista dinámica de asistentes */}
       <View style={styles.listSection}>
         <Text style={styles.sectionTitle}>
-          Estudiantes Presentes ({clase.asistentes?.length || 0})
+          Estudiantes Presentes ({asistentesActuales?.length || 0})
         </Text>
         
         <FlatList
-          data={clase.asistentes || []}
+          data={asistentesActuales || []}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <View style={styles.studentRow}>
@@ -92,23 +159,18 @@ const DetalleClaseView = ({ clase, onBack, onDelete }: DetalleClaseProps) => {
 
       <TouchableOpacity 
         style={[styles.fab, !asistenciaAbierta && { backgroundColor: '#ccc' }]} 
-        onPress={generarContenidoQR}
+        onPress={abrirQR}
         disabled={!asistenciaAbierta}
       >
         <Text style={styles.fabIcon}>QR</Text>
       </TouchableOpacity>
 
-      {/*============================================================================
-        Modal para mostrar el QR generado
-      ==========================================*/}
-
-      {/* Modal del QR (Sin cambios) */}
       <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Escanea para registrarte</Text>
             <View style={styles.qrContainer}>
-              {tokenActual ? <QRCode value={tokenActual} size={200} color="black" backgroundColor="white" /> : null}
+              <QRGeneradorDinamico claseId={clase.id.toString()} />
             </View>
             <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
               <Text style={styles.closeButtonText}>Cerrar QR</Text>
@@ -127,6 +189,8 @@ const styles = StyleSheet.create({
   backText: { color: '#007AFF', fontSize: 16 },
   deleteButton: { paddingVertical: 5, paddingHorizontal: 10, backgroundColor: '#ffe5e5', borderRadius: 8 },
   deleteText: { color: '#dc3545', fontWeight: 'bold' },
+  exportButton: { backgroundColor: '#198754', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, marginBottom: 15, alignSelf: 'flex-start' },
+  exportButtonText: { color: '#fff', fontWeight: 'bold' },
   header: { marginBottom: 30 },
   title: { fontSize: 28, fontWeight: 'bold', color: '#212529' },
   info: { fontSize: 16, color: '#6c757d' },

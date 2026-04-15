@@ -29,6 +29,7 @@ android/
 # Environment files
 .env
 .env.*
+!.env.example
 
 # Logs
 npm-debug.*

@@ -1,7 +1,9 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import React, { useState } from 'react';
-import { Alert, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Clase, registrarAsistencia } from '../models/clases';
+import React, { useEffect, useState } from 'react';
+import { Alert, FlatList, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Clase } from '../models/clases';
+import { obtenerAsistentesClase, obtenerClasesRegistradasEstudiante, registrarAsistencia, registrarAsistenciaConToken } from '../controllers/asistenciaController';
+import { obtenerDeviceId } from '../utils/deviceId';
 
 interface EstudianteViewProps {
   onBack: () => void;
@@ -17,6 +19,41 @@ const EstudianteView = ({ onBack, onLogout, user }: EstudianteViewProps) => {
   const [permiso, pedirPermiso] = useCameraPermissions();
   const [escaneando, setEscaneando] = useState(false);
   const [claseActual, setClaseActual] = useState<Clase | null>(null);
+  const [deviceId, setDeviceId] = useState<string | undefined>(undefined);
+  const [clasesRegistradas, setClasesRegistradas] = useState<Clase[]>([]);
+
+  useEffect(() => {
+    obtenerDeviceId().then(setDeviceId).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const cargarClasesRegistradas = async () => {
+      const resultado = await obtenerClasesRegistradasEstudiante(user.id.toString());
+      if (resultado?.exito) {
+        setClasesRegistradas(resultado.clases || []);
+      }
+    };
+
+    cargarClasesRegistradas();
+  }, [user.id]);
+
+  useEffect(() => {
+    if (!claseActual?.id) return;
+
+    const refrescarAsistentes = async () => {
+      const resultado = await obtenerAsistentesClase(claseActual.id);
+      if (resultado?.exito) {
+        setClaseActual((prev) => {
+          if (!prev) return prev;
+          return { ...prev, asistentes: resultado.asistentes || [] };
+        });
+      }
+    };
+
+    refrescarAsistentes();
+    const intervalo = setInterval(refrescarAsistentes, 3000);
+    return () => clearInterval(intervalo);
+  }, [claseActual?.id]);
 
   if (!permiso) {
     return <View style={styles.container} />;
@@ -58,24 +95,66 @@ const EstudianteView = ({ onBack, onLogout, user }: EstudianteViewProps) => {
     );
   };
 
-  const handleQRDetectado = (resultado: { data: string }) => {
+  const handleQRDetectado = async (resultado: { data: string }) => { // Agregamos async
     setEscaneando(false);
-    const partes = resultado.data.split('-');
+    const data = resultado.data;
+    const nuevoEstudiante = { id: user.id.toString(), nombre: user.nombre };
 
-    if (partes[0] === 'CLASE' && partes.length >= 2) {
-      const claseId = partes[1];
-      const nuevoEstudiante = { id: user.id.toString(), nombre: user.nombre };
-      const resultadoRegistro = registrarAsistencia(claseId, nuevoEstudiante);
+    let resultadoRegistro: any;
 
-      if (resultadoRegistro.exito && resultadoRegistro.clase) {
-        Alert.alert("¡Éxito!", resultadoRegistro.mensaje);
-        setClaseActual(resultadoRegistro.clase);
+    if (data.includes('.') && !data.includes('|')) {
+      // Fase 1: token HMAC firmado (formato base64.hmac_hex)
+      resultadoRegistro = await registrarAsistenciaConToken(data, nuevoEstudiante, deviceId);
+    } else {
+      // Legacy: formato claseId|timestamp
+      const partes = data.split('|');
+      if (partes.length !== 2) {
+        Alert.alert('Error', 'QR no válido o formato no reconocido.');
+        return;
+      }
+      const [claseId, timestampQR] = partes;
+      resultadoRegistro = await registrarAsistencia(claseId, nuevoEstudiante, timestampQR, deviceId);
+    }
+
+    if (resultadoRegistro.exito) {
+      Alert.alert("¡Éxito!", resultadoRegistro.mensaje);
+      const claseRegistrada = {
+        id: resultadoRegistro?.clase?.id || '',
+        nombre: resultadoRegistro?.clase?.nombre || 'Clase',
+        horaInicio: '--:--',
+        horaFin: '--:--',
+        fecha: new Date().toLocaleDateString(),
+        asistentes: resultadoRegistro.asistentes || [nuevoEstudiante],
+      };
+      setClaseActual(claseRegistrada);
+
+      const resultadoClases = await obtenerClasesRegistradasEstudiante(user.id.toString());
+      if (resultadoClases?.exito) {
+        setClasesRegistradas(resultadoClases.clases || []);
       } else {
-        Alert.alert("Aviso", resultadoRegistro.mensaje);
+        setClasesRegistradas((prev) => {
+          if (prev.some((clase) => clase.id === claseRegistrada.id)) {
+            return prev;
+          }
+          return [claseRegistrada, ...prev];
+        });
       }
     } else {
-      Alert.alert("Error", "QR no válido.");
+      Alert.alert("Error", resultadoRegistro.mensaje);
     }
+  };
+
+  const abrirClaseRegistrada = async (clase: Clase) => {
+    const resultado = await obtenerAsistentesClase(clase.id);
+    if (!resultado?.exito) {
+      Alert.alert('Error', 'No se pudo abrir la clase registrada.');
+      return;
+    }
+
+    setClaseActual({
+      ...clase,
+      asistentes: resultado.asistentes || [],
+    });
   };
 
   if (claseActual) {
@@ -96,9 +175,9 @@ const EstudianteView = ({ onBack, onLogout, user }: EstudianteViewProps) => {
             data={claseActual.asistentes || []}
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => (
-              <View style={[styles.studentRow, item.id.toString() === user.id.toString() ? styles.miFila : null]}>
-                <Text style={[styles.studentName, item.id.toString() === user.id.toString() && styles.miTexto]}>
-                  {item.nombre} {item.id.toString() === user.id.toString() && "(Tú)"}
+              <View style={[styles.studentRow, (item as any).userId?.toString() === user.id.toString() ? styles.miFila : null]}>
+                <Text style={[styles.studentName, (item as any).userId?.toString() === user.id.toString() && styles.miTexto]}>
+                  {item.nombre} {(item as any).userId?.toString() === user.id.toString() && "(Tú)"}
                 </Text>
                 <Text style={styles.studentId}>ID: {item.id}</Text>
               </View>
@@ -110,7 +189,7 @@ const EstudianteView = ({ onBack, onLogout, user }: EstudianteViewProps) => {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.containerScroll}>
       {/* CORRECCIÓN: Estilo miniLogoutButton sincronizado con el StyleSheet */}
       <View style={styles.userInfoCard}>
         <View style={{ flex: 1 }}>
@@ -148,17 +227,36 @@ const EstudianteView = ({ onBack, onLogout, user }: EstudianteViewProps) => {
           <TouchableOpacity style={styles.botonEscanear} onPress={() => setEscaneando(true)}>
             <Text style={styles.botonEscanearTexto}>📷 Escanear QR</Text>
           </TouchableOpacity>
+          <View style={styles.listaRegistradasContainer}>
+            <Text style={styles.sectionTitle}>Mis clases registradas</Text>
+            {clasesRegistradas.length === 0 ? (
+              <Text style={styles.emptyText}>Todavía no has registrado asistencia en ninguna clase.</Text>
+            ) : (
+              <FlatList
+                data={clasesRegistradas}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={styles.claseCard} onPress={() => abrirClaseRegistrada(item)}>
+                    <Text style={styles.claseCardTitulo}>{item.nombre}</Text>
+                    <Text style={styles.claseCardDetalle}>{item.fecha} | {item.horaInicio} - {item.horaFin}</Text>
+                  </TouchableOpacity>
+                )}
+                scrollEnabled={false}
+              />
+            )}
+          </View>
           <TouchableOpacity style={styles.botonVolverInicio} onPress={onBack}>
              <Text style={styles.botonVolverTexto}>Volver al Menú Principal</Text>
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#F8F9FA' },
+  containerScroll: { paddingBottom: 40 },
   containerCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   userInfoCard: { 
     flexDirection: 'row', 
@@ -209,7 +307,12 @@ const styles = StyleSheet.create({
   botonVolver: { backgroundColor: '#6c757d' },
   botonTexto: { color: 'white', fontWeight: 'bold' },
   mensaje: { fontSize: 16, textAlign: 'center', color: '#495057', marginBottom: 20 },
-  infoContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  infoContainer: { width: '100%', alignItems: 'center', paddingTop: 12 },
+  listaRegistradasContainer: { width: '100%', marginTop: 30, backgroundColor: '#fff', borderRadius: 15, padding: 16 },
+  claseCard: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  claseCardTitulo: { fontSize: 16, fontWeight: 'bold', color: '#212529', marginBottom: 4 },
+  claseCardDetalle: { fontSize: 13, color: '#6c757d' },
+  emptyText: { color: '#6c757d', textAlign: 'center', paddingVertical: 12 },
   botonVolverInicio: { marginTop: 25 },
   botonVolverTexto: { color: '#6c757d' },
 });

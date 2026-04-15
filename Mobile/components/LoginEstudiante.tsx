@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 // Importamos la URL de tu API
 import { API_URL } from "../constants/api";
+import { obtenerDeviceIdsCompat } from "../utils/deviceId";
 
 const LoginEstudiante = ({ onLogin, onBack }: any) => {
     const [id, setId] = useState('');
@@ -14,14 +15,18 @@ const LoginEstudiante = ({ onLogin, onBack }: any) => {
         }
 
         try {
+            const ids = await obtenerDeviceIdsCompat();
+
             // Llamamos a tu servidor real
-            const response = await fetch(`${API_URL}/auth/login-estudiante`, {
+            const response = await fetch(`${API_URL}/auth/login/estudiante`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     // Usamos el mismo formato de correo que en el Registro
                     correo_institucional: `${id}@universidad.edu`,
-                    password: celular
+                    password: celular,
+                    deviceId: ids.principal,
+                    deviceIdSecundario: ids.secundario,
                 })
             });
 
