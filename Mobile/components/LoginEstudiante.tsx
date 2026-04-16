@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-// Importamos la URL de tu API
-import { API_URL } from "../constants/api";
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { postJson } from "../constants/api";
 import { obtenerDeviceIdsCompat } from "../utils/deviceId";
 
 const LoginEstudiante = ({ onLogin, onBack }: any) => {
     const [id, setId] = useState('');
     const [celular, setCelular] = useState('');
+    const [cargando, setCargando] = useState(false);
 
     const handleLogin = async () => {
         if (!id || !celular) {
@@ -14,35 +14,30 @@ const LoginEstudiante = ({ onLogin, onBack }: any) => {
             return;
         }
 
+        setCargando(true);
         try {
             const ids = await obtenerDeviceIdsCompat();
-
-            // Llamamos a tu servidor real
-            const response = await fetch(`${API_URL}/auth/login/estudiante`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    // Usamos el mismo formato de correo que en el Registro
-                    correo_institucional: `${id}@universidad.edu`,
-                    password: celular,
-                    deviceId: ids.principal,
-                    deviceIdSecundario: ids.secundario,
-                })
+            const { ok, data } = await postJson('/auth/login/estudiante', {
+                correo_institucional: `${id}@universidad.edu`,
+                password: celular,
+                deviceId: ids.principal,
+                deviceIdSecundario: ids.secundario ?? '',
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                // Si el servidor dice que todo OK, guardamos el usuario y cambiamos de vista
+            if (ok && data.usuario) {
                 console.log("Login exitoso, datos del usuario:", data.usuario);
-                onLogin(data.usuario); 
+                onLogin(data.usuario);
             } else {
-                // Si la contraseña o ID están mal en MySQL
-                Alert.alert('Acceso denegado', data.mensaje || 'Credenciales incorrectas');
+                Alert.alert(
+                    'Acceso denegado',
+                    String(data.mensaje || 'Credenciales incorrectas')
+                );
             }
         } catch (error) {
             console.error(error);
             Alert.alert('Error', 'No se pudo conectar con el servidor. Revisa tu IP.');
+        } finally {
+            setCargando(false);
         }
     };
 
@@ -65,12 +60,20 @@ const LoginEstudiante = ({ onLogin, onBack }: any) => {
                     value={celular}
                     onChangeText={setCelular}
                     keyboardType="numeric"
-                    secureTextEntry // Para que no se vea la contraseña
+                    secureTextEntry
                 />
             </View>
 
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-                <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 18}}>Ingresar</Text>
+            <TouchableOpacity
+                style={[styles.loginButton, cargando && { opacity: 0.7 }]}
+                onPress={handleLogin}
+                disabled={cargando}
+            >
+                {cargando ? (
+                    <ActivityIndicator color="#fff" />
+                ) : (
+                    <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 18}}>Ingresar</Text>
+                )}
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.backButton} onPress={onBack}>
@@ -81,8 +84,6 @@ const LoginEstudiante = ({ onLogin, onBack }: any) => {
 };
 
 export default LoginEstudiante;
-
-// Los estilos se mantienen iguales... 
 
 const styles =StyleSheet.create({
     container:{

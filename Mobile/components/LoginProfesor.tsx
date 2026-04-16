@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { API_URL } from "../constants/api";
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { postJson } from "../constants/api";
 
-// Cambiamos el nombre a LoginProfesor
 const LoginProfesor = ({ onLogin, onBack }: any) => {
     const [id, setId] = useState('');
     const [password, setPassword] = useState('');
+    const [cargando, setCargando] = useState(false);
 
     const handleLogin = async () => {
         if (!id || !password) {
@@ -13,36 +13,32 @@ const LoginProfesor = ({ onLogin, onBack }: any) => {
             return;
         }
 
+        setCargando(true);
         try {
-            const response = await fetch(`${API_URL}/auth/login/profesor`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    // Para profesores usualmente es el correo completo o el ID
-                    correo_institucional: id.includes('@') ? id : `${id}@universidad.edu`,
-                    password: password
-                })
+            const { ok, data } = await postJson('/auth/login/profesor', {
+                correo_institucional: id.includes('@') ? id : `${id}@universidad.edu`,
+                password: password
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
+            if (ok && data.usuario) {
                 console.log("✅ Login Profesor exitoso");
-                setTimeout(() => {
-                    onLogin(data.usuario);
-                }, 150); 
+                onLogin(data.usuario);
             } else {
-                Alert.alert('Acceso denegado', data.mensaje || 'Credenciales de profesor incorrectas');
+                Alert.alert(
+                    'Acceso denegado',
+                    String(data.mensaje || 'Credenciales de profesor incorrectas')
+                );
             }
         } catch (error) {
             console.error("Error de conexión:", error);
             Alert.alert('Error', 'No hay conexión con el servidor de profesores.');
+        } finally {
+            setCargando(false);
         }
     };
 
     return (
         <View style={styles.container}>
-            {/* Título corregido */}
             <Text style={styles.title}>Login Profesores</Text>
             <Text style={styles.subtitle}>Panel de Administración</Text>
 
@@ -64,11 +60,16 @@ const LoginProfesor = ({ onLogin, onBack }: any) => {
             </View>
 
             <TouchableOpacity 
-                style={styles.loginButton} 
+                style={[styles.loginButton, cargando && { opacity: 0.7 }]} 
                 onPress={handleLogin}
                 activeOpacity={0.7}
+                disabled={cargando}
             >
-                <Text style={styles.loginText}>Acceder al Panel</Text>
+                {cargando ? (
+                    <ActivityIndicator color="#fff" />
+                ) : (
+                    <Text style={styles.loginText}>Acceder al Panel</Text>
+                )}
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.backButton} onPress={onBack}>
@@ -82,7 +83,7 @@ export default LoginProfesor;
 
 const styles = StyleSheet.create({
     container: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: '#f9f9f9' },
-    title: { fontSize: 28, fontWeight: 'bold', color: '#2e7d32', textAlign: 'center' }, // Color verde
+    title: { fontSize: 28, fontWeight: 'bold', color: '#2e7d32', textAlign: 'center' },
     subtitle: { fontSize: 16, color: '#7f8c8d', textAlign: 'center', marginBottom: 30 },
     card: { 
         backgroundColor: '#fff', 
@@ -103,7 +104,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#f8f9fa' 
     },
     loginButton: { 
-        backgroundColor: '#4CAF50', // Verde para diferenciar del azul de estudiantes
+        backgroundColor: '#4CAF50',
         padding: 18, 
         borderRadius: 15, 
         alignItems: 'center',
