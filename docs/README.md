@@ -2,6 +2,20 @@
 
 Esta carpeta contiene el material de **wiki** en formato Markdown, listo para publicar en GitHub.
 
+## Documento Word (normas APA 7.ª ed.)
+
+Se puede generar un informe en **Word** (`.docx`) con estructura de trabajo estudiantil APA: portada, resumen, cuerpo por secciones, tablas y referencias.
+
+```bash
+cd docs
+npm install
+npm run build:apa
+```
+
+El archivo generado es **`SmartAttendance-Documentacion-APA.docx`**. Completa en la portada institución, curso y docente entre corchetes.
+
+Para volver a generar tras editar `generate-apa-word.mjs`, ejecuta de nuevo `npm run build:apa`.
+
 ## Contenido
 
 | Archivo en `docs/wiki/` | Uso en GitHub Wiki |

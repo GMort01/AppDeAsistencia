@@ -1,0 +1,12 @@
+{
+  "name": "appdeasistencia-docs",
+  "private": true,
+  "description": "Generación de documentación Word (APA)",
+  "type": "module",
+  "scripts": {
+    "build:apa": "node generate-apa-word.mjs"
+  },
+  "dependencies": {
+    "docx": "^9.5.0"
+  }
+}
