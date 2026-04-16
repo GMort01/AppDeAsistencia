@@ -16,23 +16,37 @@ Los enlaces internos `[[Nombre]]` son la sintaxis de wiki de GitHub y conectan e
 
 ## Publicar en la Wiki del repositorio
 
-1. En GitHub: **Wiki** → *Create the first page* (si está vacía), o clonar el repo de la wiki.
-2. Clonar la wiki (sustituye la URL si usas SSH):
+### Paso 1 (obligatorio): crear la wiki en GitHub
 
-   ```bash
-   git clone https://github.com/GMort01/AppDeAsistencia.wiki.git
-   cd AppDeAsistencia.wiki
-   ```
+GitHub **no crea** el repositorio `https://github.com/GMort01/AppDeAsistencia.wiki.git` hasta que exista **al menos una página**.
 
-3. Copiar los `.md` desde `docs/wiki/` de este repositorio a la carpeta clonada (mismos nombres de archivo).
-4. Commit y push:
+1. Abre el repo → pestaña **Wiki**.
+2. **Create the first page** (o **New page**).
+3. Título: por ejemplo `Home`, contenido cualquiera (una línea), **Save page**.
 
-   ```bash
-   git add .
-   git commit -m "Documentación: arquitectura, API, instalación y modelo de datos"
-   git push origin master
-   ```
+Sin este paso, `git clone` y `git push` a la wiki devuelven **Repository not found**.
 
-   > Algunas wikis usan la rama `master`, otras `main`; GitHub muestra la rama activa en la pestaña Wiki.
+### Paso 2: subir la documentación
 
-Alternativa manual: crear cada página en la interfaz web de la wiki y pegar el contenido de cada archivo.
+**Opción A — script (Windows, PowerShell)** desde la raíz del proyecto:
+
+```powershell
+.\docs\publish-wiki.ps1
+```
+
+(Tienes que tener sesión `git` con permiso de push en el repo; si pide credenciales, usa un [Personal Access Token](https://github.com/settings/tokens) como contraseña.)
+
+**Opción B — manual**
+
+```bash
+git clone https://github.com/GMort01/AppDeAsistencia.wiki.git
+cd AppDeAsistencia.wiki
+# Copia aquí los .md desde docs/wiki/ del repo principal (mismos nombres)
+git add .
+git commit -m "Documentación: arquitectura, API, instalación y modelo de datos"
+git push origin master
+```
+
+> La wiki de GitHub suele usar la rama `master`; si tu wiki usa `main`, ajusta el comando.
+
+**Opción C:** crear cada página a mano en la web y pegar el contenido de cada archivo de `docs/wiki/`.
