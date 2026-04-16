@@ -1,11 +1,11 @@
 # Publica el contenido de docs/wiki/ en el repositorio Wiki de GitHub.
-# Requisito obligatorio: en GitHub ya debe existir al menos UNA página en la Wiki
-# (pestaña Wiki → Create the first page → guardar). Sin eso, el clone/push falla con "Repository not found".
+# Requisito: debe existir al menos una pagina en la Wiki (GitHub crea el repo .wiki.git).
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $WikiSource = Join-Path $RepoRoot "docs\wiki"
 $WikiWork = Join-Path $RepoRoot "..\.wiki-work-AppDeAsistencia"
+$WikiUrl = "https://github.com/GMort01/AppDeAsistencia.wiki.git"
 
 if (-not (Test-Path $WikiSource)) {
     Write-Error "No se encuentra la carpeta: $WikiSource"
@@ -14,20 +14,26 @@ if (-not (Test-Path $WikiSource)) {
 if (Test-Path $WikiWork) {
     Remove-Item -Recurse -Force $WikiWork
 }
-New-Item -ItemType Directory -Path $WikiWork | Out-Null
+
+Write-Host "Clonando wiki..."
+git clone $WikiUrl $WikiWork
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "No se pudo clonar la wiki. Crea una pagina en GitHub > Wiki primero."
+}
+
 Copy-Item -Path (Join-Path $WikiSource "*") -Destination $WikiWork -Force
 
 Set-Location $WikiWork
-if (-not (Test-Path ".git")) {
-    git init
-    git add .
-    git commit -m "docs: documentacion wiki (arquitectura, API, instalacion)"
+git add -A
+$status = git status --porcelain
+if ($status) {
+    git commit -m "docs: actualizar documentacion (arquitectura, API, instalacion, modelo)"
 }
-git branch -M master 2>$null
-git remote remove origin 2>$null
-git remote add origin https://github.com/GMort01/AppDeAsistencia.wiki.git
-Write-Host "Intentando push a la wiki..."
-git push -u origin master
+Write-Host "Subiendo cambios..."
+git push origin master
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Si falla por historiales distintos: git pull origin master --allow-unrelated-histories"
+}
 
-Write-Host "Listo. Si falla con 'Repository not found', crea primero una pagina en GitHub > Wiki y vuelve a ejecutar este script."
-Set-Location $RepoRoot
+Set-Location (Split-Path -Parent $PSScriptRoot)
+Write-Host "Listo."
