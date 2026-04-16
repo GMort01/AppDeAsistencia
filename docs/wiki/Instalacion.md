@@ -4,8 +4,20 @@
 
 - **Node.js** LTS (recomendado 20+)
 - **npm**
-- **MySQL** accesible (local o remoto) con base de datos creada según el esquema del proyecto
+- **Base de datos compatible con el backend actual** (ver siguiente sección)
 - Para la app: **Expo CLI** / **npx expo** y opcionalmente **Expo Go** en el teléfono
+
+## Base de datos: ¿MySQL local o “la nube”?
+
+El código del servidor en esta rama usa el paquete **`mysql2`** y consultas en dialecto **MySQL/MariaDB** (`database_schema.sql`, migraciones con `ENGINE=InnoDB`, etc.). Por eso la wiki habla de **MySQL**: es el **motor que el programa espera hoy**, no obliga a que el servidor físico esté en tu PC.
+
+| Situación | ¿Funciona con este código? |
+|-----------|----------------------------|
+| MySQL o MariaDB en **tu máquina** (`localhost`) | Sí. `DB_HOST=localhost`. |
+| MySQL/MariaDB **en la nube** (RDS, Azure Database for MySQL, PlanetScale en modo MySQL, etc.) | Sí. Pon en `.env` el **host, usuario, contraseña y puerto** que te da el proveedor (suele ser distinto de 3306 o requiere SSL según el servicio). |
+| **PostgreSQL** en la nube (p. ej. **Neon**) | **No** con este backend tal cual: Neon es otro motor. Haría falta usar el cliente `pg`, otro esquema SQL y adaptar controladores. Si el equipo ya usa Neon, o bien migran el servidor a PostgreSQL, o bien usan una base **MySQL** en la nube para alinear con `mysql2`. |
+
+En resumen: **“tener MySQL”** en la documentación significa **usar ese tipo de base con este repositorio**; una BD en la nube **sí sirve** si es **MySQL/MariaDB compatible**. Si vuestra nube es solo **Postgres**, la wiki no puede decir “solo pega la URL de Neon” sin cambiar el código del `server/`.
 
 ## Backend (`server/`)
 

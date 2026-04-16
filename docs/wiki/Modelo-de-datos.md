@@ -1,6 +1,6 @@
 # Modelo de datos
 
-El proyecto incluye scripts SQL en la raíz de `server/` (por ejemplo `database_schema.sql` para MySQL). Las tablas evolucionan con **migraciones aplicadas al arranque** en `server/src/index.js` (columnas extra en `clases`, tabla `tokens_qr_usados`, `dispositivo_vinculado` en `usuarios`, etc.).
+El proyecto incluye scripts SQL en `server/` (por ejemplo `database_schema.sql` para **MySQL/MariaDB**). Ese es el motor que usa el backend con **`mysql2`**; el host puede ser **local o un servidor MySQL en la nube**, pero **no** una URL de PostgreSQL (Neon) sin adaptar el código. Las tablas evolucionan con **migraciones al arranque** en `server/src/index.js` (columnas extra en `clases`, tabla `tokens_qr_usados`, `dispositivo_vinculado` en `usuarios`, etc.).
 
 ## Diagrama entidad-relación (conceptual)
 

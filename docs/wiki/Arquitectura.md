@@ -22,7 +22,7 @@ flowchart TB
     end
 
     subgraph Datos["Persistencia"]
-        DB[(MySQL)]
+        DB[(MySQL / MariaDB)]
     end
 
     UI --> API_CLIENT
@@ -50,7 +50,7 @@ flowchart LR
     Prof --> App
     Est --> App
     App -->|HTTP JSON| API
-    API -->|mysql2| DB
+    API -->|mysql2 (local o nube)| DB
 ```
 
 ## Flujo de autenticación (resumen)

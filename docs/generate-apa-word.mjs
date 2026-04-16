@@ -203,9 +203,9 @@ const arquitectura = [
 const instalacion = [
   h1("Instalación y configuración"),
   h2("Requisitos"),
-  p("Node.js LTS (recomendado 20+), npm, MySQL según database_schema.sql, Expo CLI o npx expo, y opcionalmente Expo Go en el dispositivo.", { firstLine: true }),
+  p("Node.js LTS (recomendado 20+), npm, base MySQL/MariaDB según database_schema.sql (el host puede ser local o un MySQL en la nube; PostgreSQL como Neon requiere otro backend), Expo CLI o npx expo, y opcionalmente Expo Go.", { firstLine: true }),
   h2("Backend (carpeta server)"),
-  p("Ejecutar npm install en server/. Configurar server/.env sin subir credenciales al repositorio.", { firstLine: true }),
+  p("Ejecutar npm install en server/. Configurar server/.env sin subir credenciales. Si la base está en la nube, usar DB_HOST y puerto del proveedor MySQL.", { firstLine: true }),
   tableFromMatrix([
     ["Variable", "Descripción"],
     ["DB_HOST", "Host de MySQL"],

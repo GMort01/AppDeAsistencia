@@ -21,6 +21,8 @@ Sistema de **control de asistencia educativa** con **código QR**, roles **profe
 
 Código fuente: [GMort01/AppDeAsistencia](https://github.com/GMort01/AppDeAsistencia)
 
+**Base de datos:** el backend de esta rama está pensado para **MySQL/MariaDB** (también puede estar **en la nube** si el proveedor ofrece MySQL). Si usáis **PostgreSQL** (p. ej. Neon), hace falta otra variante del servidor; ver [[Instalacion]].
+
 ---
 
 *Documentación generada para el equipo de desarrollo. Mantener alineada con la rama `main`.*
